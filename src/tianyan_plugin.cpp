@@ -382,13 +382,11 @@ void TianyanPlugin::onLoad()
         getLogger().info("No data path,auto create");
         filesystem::create_directory(TianyanCore::dataPath);
     }
-    // Obtener el idioma del servidor
-    const string sever_lang = getServer().getLanguage().getLocale();
-    TianyanCore::language_file = string(TianyanCore::dataPath) + "/language/"+sever_lang+".json";
-    Tran = std::make_unique<translate>(TianyanCore::language_file);
-    // Cargar idioma
-    const auto [fst, snd] = Tran->loadLanguage();
-    getLogger().info(snd);
+    // NOTA (migración 0.11.7): NO llamar a getServer().getLanguage() aquí.
+    // loadPlugins() ahora corre dentro del constructor de EndstoneServer,
+    // antes de que ese subsistema exista -> SIGSEGV en getLocale().
+    // El idioma real se resuelve más abajo, en onEnable(), leyendo
+    // config.json (ver TianyanCore::language_file más adelante).
 }
 
 void TianyanPlugin::onEnable()
