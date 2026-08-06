@@ -39,34 +39,46 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Rust toolchain
+        if: runner.os == 'Windows'
         run: rustup show
 
       # ===== Linux =====
-      - name: Install dependencies (Linux)
+      # Se compila DENTRO de un contenedor Debian 11 (glibc 2.31) en vez de
+      # directo en el runner. El runner (ubuntu-22.04, glibc 2.35, o incluso
+      # ubuntu-24.04, glibc 2.39) puede ser más nuevo que el host donde vive
+      # el server, y un .so linkeado contra una glibc nueva no carga en un
+      # host con una glibc más vieja ("version GLIBC_2.38 not found").
+      # glibc es compatible hacia atrás, así que compilar contra una versión
+      # vieja (2.31) produce un binario que corre en prácticamente cualquier
+      # host actual, incluidos los de hosting compartido tipo Purpify.
+      - name: Build inside Debian 11 container (Linux, old glibc baseline)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common unzip zip
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 19
-          sudo apt-get install -y libc++-19-dev libc++abi-19-dev cmake libsqlite3-dev ninja-build
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
-        run: |
+          RELEASE_FLAG=""
           if [ "${{ github.event.inputs.release_type }}" = "release" ]; then
-            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DRELEASE_VERSION=1 \
-                  -DCMAKE_C_COMPILER=clang-19 \
-                  -DCMAKE_CXX_COMPILER=clang++-19 \
-                  -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-                  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-          else
-            cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release \
-                  -DCMAKE_C_COMPILER=clang-19 \
-                  -DCMAKE_CXX_COMPILER=clang++-19 \
-                  -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-                  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            RELEASE_FLAG="-DRELEASE_VERSION=1"
           fi
+          docker run --rm -v "$PWD":/work -w /work debian:11 bash -c "
+            set -e
+            apt-get update
+            apt-get install -y wget gnupg lsb-release software-properties-common \
+                                unzip zip cmake ninja-build libsqlite3-dev zlib1g-dev \
+                                git ca-certificates curl
+            wget https://apt.llvm.org/llvm.sh
+            chmod +x llvm.sh
+            ./llvm.sh 15
+            apt-get install -y libc++-15-dev libc++abi-15-dev
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            . \"\$HOME/.cargo/env\"
+            git config --global --add safe.directory /work
+            cmake -G Ninja -B build $RELEASE_FLAG \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_C_COMPILER=clang-15 \
+                  -DCMAKE_CXX_COMPILER=clang++-15 \
+                  -DCMAKE_CXX_FLAGS='-stdlib=libc++' \
+                  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+            cmake --build build --config Release
+          "
       # ===== Windows =====
       - name: Set up MSVC
         if: runner.os == 'Windows'
@@ -108,8 +120,10 @@ jobs:
               -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
               -DVCPKG_TARGET_TRIPLET=x64-windows-static
           }
-      # ===== Build =====
+      # ===== Build (Windows) =====
+      # El build de Linux ya se hizo dentro del contenedor Debian 11 arriba.
       - name: Build
+        if: runner.os == 'Windows'
         run: cmake --build build --config Release
 
       # ===== Prepare plugin artifact (Linux) =====
