@@ -1,0 +1,85 @@
+#pragma once
+
+#include "database_backend.h"
+#include <atomic>
+#include <condition_variable>
+#include "database.hpp"
+#include "database_util.h"
+#include <sqlite3.h>
+
+class SqliteBackend : public IDatabaseBackend {
+public:
+    explicit SqliteBackend(std::string db_filename)
+        : db_(std::move(db_filename)) {}
+
+    int init_database() override;
+
+    int addLog(const std::string& uuid,
+               const std::string& id,
+               const std::string& name,
+               double pos_x, double pos_y, double pos_z,
+               const std::string& world,
+               const std::string& obj_id,
+               const std::string& obj_name,
+               long long time,
+               const std::string& type,
+               const std::string& data,
+               const std::string& status) override;
+
+    int addLogs(const std::vector<DatabaseLogEntry>& entries) override;
+
+    int searchLog(std::vector<std::map<std::string, std::string>>& result,
+                  const std::pair<std::string, double>& key,
+                  std::atomic<bool>* cancel) override;
+
+    int searchLog(std::vector<std::map<std::string, std::string>>& result,
+                  const std::pair<std::string, double>& key,
+                  double x, double y, double z, double r,
+                  const std::string& world,
+                  std::atomic<bool>* cancel) override;
+
+    bool updateStatusesByUUIDs(
+        const std::vector<std::pair<std::string, std::string>>& pairs) override;
+
+    int64_t getCleanCount(long long timestamp) override;
+
+    int deleteBatch(long long timestamp, int limit) override;
+
+    bool beginCleanup() override;
+    int cleanupDeleteBatch(long long timestamp, int limit) override;
+    bool cleanupCheckpoint() override;
+    bool abortCleanup() override;
+    bool endCleanup() override;
+
+    [[nodiscard]] bool isSqlite() const override { return true; }
+
+    std::string generateUuid() override;
+
+    int executeSQL(const std::string& sql) override;
+
+    int querySQL(const std::string& sql,
+                 std::vector<std::map<std::string, std::string>>& result) override;
+
+    int updateSQL(const std::string& table,
+                  const std::string& set_clause,
+                  const std::string& where_clause) override;
+
+    bool isValueExists(const std::string& tableName,
+                       const std::string& columnName,
+                       const std::string& value) override;
+
+    bool updateValue(const std::string& tableName,
+                     const std::string& targetColumn,
+                     const std::string& newValue,
+                     const std::string& conditionColumn,
+                     const std::string& conditionValue) override;
+
+    bool updateStatusByUUID(const std::string& uuid,
+                            const std::string& newStatus) override;
+
+    int getAllLog(std::vector<std::map<std::string, std::string>>& result) override;
+
+private:
+    yuhangle::Database db_;
+    sqlite3* cleanup_db_ = nullptr;
+};

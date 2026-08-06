@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="page_title">Monitor de Registros Tianyan | TitanEye</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text" class="loading-text" data-i18n="loading">Cargando...</div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="login-view" class="view-container">
+        <div class="card login-box">
+            <div class="login-title" data-i18n="login_title">👁️ Consola TitanEye</div>
+
+            <div class="input-group">
+                <label class="input-label" data-i18n="backend_address">Dirección del servidor</label>
+                <input type="text" id="api-url" placeholder="http://127.0.0.1:8098" value="http://127.0.0.1:8098">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" data-i18n="secret_key">Clave secreta</label>
+                <input type="password" id="api-secret" placeholder="Ingresa la clave secreta de web_config.json" data-placeholder-i18n="enter_secret">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label" data-i18n="language">Idioma</label>
+                <select id="language-select-login">
+                    <option value="en_US">English</option>
+                    <option value="zh_CN">中文</option>
+                    <option value="ru_RU">Русский</option>
+                    <option value="es_ES">Español</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary btn-block" id="btn-login" data-i18n="enter_console">Entrar a la consola</button>
+        </div>
+    </div>
+
+    <div id="main-view" class="view-container" style="display: none;">
+        <header>
+            <div class="brand">
+                <span style="font-size: 24px;">👁️</span> <span data-i18n="console_title">Consola Tianyan</span>
+            </div>
+            <div class="header-actions">
+                <div class="language-selector">
+                    <select id="language-select-main">
+                        <option value="en_US">English</option>
+                        <option value="zh_CN">中文</option>
+                        <option value="ru_RU">Русский</option>
+                        <option value="es_ES">Español</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline" id="btn-db-info" data-i18n="db_info">📊 Información de la base de datos</button>
+                <button class="btn btn-danger-outline" id="btn-logout" data-i18n="logout">Cerrar sesión</button>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <div class="stats-row">
+                <div class="card stat-card">
+                    <div class="stat-label" data-i18n="total_logs">Total de registros</div>
+                    <div class="stat-value" id="stat-total">--</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label" data-i18n="db_size">Tamaño de la base de datos</div>
+                    <div class="stat-value" id="stat-size">--</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label" data-i18n="query_time">Tiempo de consulta</div>
+                    <div class="stat-value" id="stat-time">-- ms</div>
+                </div>
+                <div class="card stat-card flex-center">
+                    <button class="btn btn-primary" id="btn-refresh-stats" data-i18n="refresh_stats">🔄 Actualizar estadísticas</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="filter-section">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label class="input-label" data-i18n="start_time">Hora de inicio</label>
+                            <input type="datetime-local" id="filter-start" class="datetime-input">
+                        </div>
+                        <div class="filter-item">
+                            <label class="input-label" data-i18n="end_time">Hora de fin</label>
+                            <input type="datetime-local" id="filter-end" class="datetime-input">
+                        </div>
+
+                        <div class="filter-item">
+                            <label class="input-label" data-i18n="filter_field">Campo de filtro</label>
+                            <select id="filter-type">
+                                <option value="" data-i18n="all_fields">Todos los campos (sin filtro)</option>
+                                <option value="name" data-i18n="actor_name">Nombre del actor</option>
+                                <option value="id" data-i18n="actor_id">ID del actor</option>
+                                <option value="type" data-i18n="action_type">Tipo de acción</option>
+                                <option value="obj_name" data-i18n="target_name">Nombre del objetivo</option>
+                                <option value="obj_id" data-i18n="target_id">ID del objetivo</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-item" style="flex: 2;">
+                            <label class="input-label" data-i18n="keyword">Palabra clave</label>
+                            <input type="text" id="filter-value" placeholder="Ingresa ID, nombre de jugador o tipo..." data-placeholder-i18n="enter_keyword">
+                        </div>
+                    </div>
+
+                    <div class="coord-group">
+                        <div class="coord-title" data-i18n="coord_query">📍 Búsqueda por coordenadas (opcional)</div>
+                        <input type="number" class="coord-input" id="coord-x" placeholder="X">
+                        <input type="number" class="coord-input" id="coord-y" placeholder="Y">
+                        <input type="number" class="coord-input" id="coord-z" placeholder="Z">
+                        <div class="coord-radius-group">
+                            <span data-i18n="radius">Radio:</span>
+                            <input type="number" class="coord-input" id="coord-r" placeholder="R" value="10">
+                        </div>
+                        <select id="coord-dim" class="dim-select">
+                            <option value="all" data-i18n="all_dimensions">Todas las dimensiones</option>
+                            <option value="Overworld" data-i18n="overworld">Overworld</option>
+                            <option value="Nether" data-i18n="nether">Nether</option>
+                            <option value="TheEnd" data-i18n="the_end">The End</option>
+                            <option value="custom" data-i18n="custom">Personalizado...</option>
+                        </select>
+                        <input type="text" id="coord-dim-custom" placeholder="Ingresa el nombre de la dimensión" data-placeholder-i18n="enter_dimension" style="display: none; width: 120px;">
+                    </div>
+
+                    <div class="filter-row action-buttons">
+                        <button class="btn btn-outline" id="btn-reset" data-i18n="reset">Restablecer</button>
+                        <button class="btn btn-outline" id="btn-export" data-i18n="export_csv">📥 Exportar CSV</button>
+                        <button class="btn btn-primary" id="btn-search" data-i18n="search_logs">🔍 Buscar registros</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="logs-table">
+                    <thead>
+                        <tr>
+                            <th width="160" data-i18n="time">Hora</th>
+                            <th width="140" data-i18n="actor">Actor (ID/Nombre)</th>
+                            <th width="100" data-i18n="action_type">Tipo de acción</th>
+                            <th width="140" data-i18n="target">Objetivo (ID/Nombre)</th>
+                            <th width="280" data-i18n="location">Ubicación (X, Y, Z, Dim)</th>
+                            <th width="80" id="th-dist" style="display: none;" data-i18n="distance">Distancia</th>
+                            <th data-i18n="details">Detalles</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-body">
+                    </tbody>
+                </table>
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <div class="empty-icon">📭</div>
+                    <div data-i18n="no_data">Sin datos, intenta ajustar los criterios de búsqueda</div>
+                </div>
+            </div>
+
+            <div class="card pagination">
+                <div class="page-info" id="page-info"></div>
+                <div class="page-controls">
+                    <select id="page-size" data-i18n="page_size">Registros por página<option value="50" data-i18n="per_page_50">50 por página</option>
+                        <option value="100" selected data-i18n="per_page_100">100 por página</option>
+                        <option value="200" data-i18n="per_page_200">200 por página</option>
+                    </select>
+                    <button class="btn btn-outline" id="btn-prev" data-i18n="prev_page">Anterior</button>
+                    <span id="page-curr" class="page-current">1</span>
+                    <span class="page-divider">/</span>
+                    <span id="page-total" class="page-total">1</span>
+                    <button class="btn btn-outline" id="btn-next" data-i18n="next_page">Siguiente</button>
+                    <div class="jump-page-group">
+                        <input type="number" id="jump-page-input" min="1" placeholder="Número de página" data-placeholder-i18n="jump_page_placeholder">
+                        <button class="btn btn-outline" id="btn-jump-page" data-i18n="jump_page">Ir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
