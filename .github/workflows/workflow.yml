@@ -1,0 +1,73 @@
+name: Build tianyan plugin (.so)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # rust_mysql y world_inspector se compilan con `cargo build --release`
+      # dentro del propio CMake (ExternalProject_Add) — necesitan un rustc
+      # reciente (edition2024 en la cadena de dependencias de rust_mysql).
+      - name: Instalar toolchain de Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Endstone en Linux requiere Clang 15+ y libc++ (no libstdc++).
+      # endstone_add_plugin fuerza -stdlib=libc++ y -fvisibility=hidden
+      # a partir de v0.11.7, así que basta con exponer clang/clang++.
+      - name: Instalar Clang, libc++, Ninja y librerías del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang libc++-dev libc++abi-dev \
+            ninja-build cmake \
+            libsqlite3-dev zlib1g-dev git
+
+      # Cachea lo que descarga FetchContent (endstone, fmt, nlohmann_json,
+      # endstone-inventoryui) y los builds de cargo, para que los runs
+      # siguientes no vuelvan a compilar todo desde cero.
+      - name: Cachear dependencias (FetchContent + Cargo)
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+            build/world_inspector
+            rust_mysql/target
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-tianyan-${{ hashFiles('CMakeLists.txt', 'rust_mysql/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-tianyan-
+
+      - name: Configurar CMake
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DRELEASE_VERSION=ON
+
+      - name: Compilar
+        run: cmake --build build --config Release --parallel
+
+      - name: Ubicar el .so generado
+        id: locate
+        run: |
+          SO_PATH=$(find build -maxdepth 1 -name "*.so" | head -n1)
+          echo "Encontrado: $SO_PATH"
+          echo "so_path=$SO_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: tianyan-plugin-linux-so
+          path: ${{ steps.locate.outputs.so_path }}
+          if-no-files-found: error
