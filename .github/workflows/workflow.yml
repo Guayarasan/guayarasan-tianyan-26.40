@@ -66,15 +66,15 @@ jobs:
                                 git ca-certificates curl
             wget https://apt.llvm.org/llvm.sh
             chmod +x llvm.sh
-            ./llvm.sh 15
-            apt-get install -y libc++-15-dev libc++abi-15-dev
+            ./llvm.sh 19
+            apt-get install -y libc++-19-dev libc++abi-19-dev
             curl https://sh.rustup.rs -sSf | sh -s -- -y
             . \"\$HOME/.cargo/env\"
             git config --global --add safe.directory /work
             cmake -G Ninja -B build $RELEASE_FLAG \
                   -DCMAKE_BUILD_TYPE=Release \
-                  -DCMAKE_C_COMPILER=clang-15 \
-                  -DCMAKE_CXX_COMPILER=clang++-15 \
+                  -DCMAKE_C_COMPILER=clang-19 \
+                  -DCMAKE_CXX_COMPILER=clang++-19 \
                   -DCMAKE_CXX_FLAGS='-stdlib=libc++' \
                   -DCMAKE_POSITION_INDEPENDENT_CODE=ON
             cmake --build build --config Release
