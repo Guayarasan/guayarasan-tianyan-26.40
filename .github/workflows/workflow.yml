@@ -72,7 +72,7 @@ jobs:
             . \"\$HOME/.cargo/env\"
             git config --global --add safe.directory /work
             cmake -G Ninja -B build $RELEASE_FLAG \
-                  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                  -DCMAKE_BUILD_TYPE=Release \
                   -DCMAKE_C_COMPILER=clang-19 \
                   -DCMAKE_CXX_COMPILER=clang++-19 \
                   -DCMAKE_CXX_FLAGS='-stdlib=libc++' \
