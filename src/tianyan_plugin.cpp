@@ -404,6 +404,15 @@ void TianyanPlugin::onEnable()
         }
     } catch (const std::exception&) {}
 
+    // Inicializar Tran ANTES de usarlo: el bloque de abajo (rama mysql) ya
+    // llama a Tran->getLocal(...), y hasta ahora Tran no se asignaba hasta
+    // más adelante en esta función -> puntero nulo -> SIGSEGV. Más abajo,
+    // al leer el idioma configurado, Tran se reasigna con el idioma correcto.
+    if (!Tran) {
+        Tran = std::make_unique<translate>(TianyanCore::language_file);
+        Tran->loadLanguage();
+    }
+
     // Crear el backend de base de datos
     if (db_type_ == "mysql") {
         RustMySQLConfig config;
