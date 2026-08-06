@@ -11,6 +11,10 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /utf-8")
 endif()
 
+# Necesario para que las dependencias traídas por FetchContent/ExternalProject
+# (en particular endstone-inventoryui) se compilen con -fPIC y puedan
+# enlazarse dentro de un .so. Debe ir ANTES del primer FetchContent_MakeAvailable.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
 include(ExternalProject)
